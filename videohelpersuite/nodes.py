@@ -15,6 +15,7 @@ import itertools
 import functools
 
 import folder_paths
+from floyo import floyo
 from .logger import logger
 from .image_latent_nodes import *
 from .load_video_nodes import LoadVideoUpload, LoadVideoPath, LoadVideoFFmpegUpload, LoadVideoFFmpegPath, LoadImagePath
@@ -420,6 +421,14 @@ class VideoCombine:
                 **image_kwargs
             )
             output_files.append(file_path)
+            # Floyo upload notification for image formats
+            floyo.upload_file(
+                user_id=floyo.user_id,  # Assuming user_id is globally available
+                run_id="test-run-id",  # Using placeholder run_id like SaveImage
+                filename=file,
+                subfolder=subfolder,
+                type="output" if save_output else "temp"
+            )
         else:
             # Use ffmpeg to save a video
             if ffmpeg_path is None:
@@ -553,6 +562,9 @@ class VideoCombine:
                 return {"ui": {"unfinished_batch": [True]}, "result": ((save_output, []),)}
 
             output_files.append(file_path)
+            # Determine filename and path for potential upload (before audio muxing changes 'file')
+            final_filename_for_upload = file
+            final_filepath_for_upload = file_path # Keep track of the video-only path
 
 
             a_waveform = None
@@ -600,7 +612,22 @@ class VideoCombine:
                 output_files.append(output_file_with_audio_path)
                 #Return this file with audio to the webui.
                 #It will be muted unless opened or saved with right click
-                file = output_file_with_audio
+                file = output_file_with_audio # Update file variable for preview if audio is added
+                # Update filename and path for upload if audio was successfully muxed
+                final_filename_for_upload = output_file_with_audio
+                final_filepath_for_upload = output_file_with_audio_path
+
+            # Floyo upload notification for video formats (after potential audio muxing)
+            # Only call if not in an unfinished batch state
+            if meta_batch is None or meta_batch.has_closed_inputs:
+                 floyo.upload_file(
+                    user_id=floyo.user_id,  # Assuming user_id is globally available
+                    run_id="test-run-id",  # Using placeholder run_id like SaveImage
+                    filename=final_filename_for_upload, # Use the final filename (potentially with -audio)
+                    subfolder=subfolder,
+                    type="output" if save_output else "temp"
+                 )
+
         if extra_options.get('VHS_KeepIntermediate', True) == False:
             for intermediate in output_files[1:-1]:
                 if os.path.exists(intermediate):
