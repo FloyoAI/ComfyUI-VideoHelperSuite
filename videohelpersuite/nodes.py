@@ -422,7 +422,7 @@ class VideoCombine:
             )
             output_files.append(file_path)
             # Floyo upload notification for image formats
-            floyo.upload_file(
+            final_filename_for_upload = floyo.upload_file(
                 user_id=floyo.user_id,  # Assuming user_id is globally available
                 run_id="test-run-id",  # Using placeholder run_id like SaveImage
                 filename=file,                
@@ -644,7 +644,7 @@ class VideoCombine:
             # Floyo upload notification for video formats (after potential audio muxing)
             # Only call if not in an unfinished batch state
             if meta_batch is None or meta_batch.has_closed_inputs:
-                 floyo.upload_file(
+                 final_filename_for_upload = floyo.upload_file(
                     user_id=floyo.user_id,  # Assuming user_id is globally available
                     run_id="test-run-id",  # Using placeholder run_id like SaveImage
                     filename=final_filename_for_upload, # Use the final filename (potentially with -audio)
@@ -660,7 +660,7 @@ class VideoCombine:
                 if os.path.exists(intermediate):
                     os.remove(intermediate)
         preview = {
-                "filename": file,
+                "filename": final_filename_for_upload if format_type == "image" else final_filename_for_upload,
                 "subfolder": subfolder,
                 "type": "output" if save_output else "temp",
                 "format": format,
