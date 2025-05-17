@@ -425,9 +425,19 @@ class VideoCombine:
             floyo.upload_file(
                 user_id=floyo.user_id,  # Assuming user_id is globally available
                 run_id="test-run-id",  # Using placeholder run_id like SaveImage
-                filename=file,
+                filename=file,                
                 subfolder=subfolder,
-                type="output" if save_output else "temp"
+                type="output" if save_output else "temp",
+                filename_prefix=filename,
+                file_extension=format_ext,
+                filename_template=[
+                    { "type": "placeholder", "name": "filename_prefix" },
+                    { "type": "literal", "value": "_" },
+                    { "type": "counter", "padding": 5 },
+                    { "type": "literal", "value": "_" },
+                    { "type": "literal", "value": "." },
+                    { "type": "placeholder", "name": "file_extension" }
+                ]
             )
         else:
             # Use ffmpeg to save a video
@@ -564,7 +574,14 @@ class VideoCombine:
             output_files.append(file_path)
             # Determine filename and path for potential upload (before audio muxing changes 'file')
             final_filename_for_upload = file
-            final_filepath_for_upload = file_path # Keep track of the video-only path
+            #final_filepath_for_upload = file_path # Keep track of the video-only path
+            filename_template_video = [
+                { "type": "placeholder", "name": "filename_prefix" },
+                { "type": "literal", "value": "_" },
+                { "type": "counter", "padding": 5 },
+                { "type": "literal", "value": "." },
+                { "type": "placeholder", "name": "file_extension" }
+            ]
 
 
             a_waveform = None
@@ -615,7 +632,14 @@ class VideoCombine:
                 file = output_file_with_audio # Update file variable for preview if audio is added
                 # Update filename and path for upload if audio was successfully muxed
                 final_filename_for_upload = output_file_with_audio
-                final_filepath_for_upload = output_file_with_audio_path
+                #final_filepath_for_upload = output_file_with_audio_path
+                filename_template_video = [
+                    { "type": "placeholder", "name": "filename_prefix" },
+                    { "type": "literal", "value": "_" },
+                    { "type": "counter", "padding": 5 },
+                    { "type": "literal", "value": "-audio." },
+                    { "type": "placeholder", "name": "file_extension" }
+                ]
 
             # Floyo upload notification for video formats (after potential audio muxing)
             # Only call if not in an unfinished batch state
@@ -625,7 +649,10 @@ class VideoCombine:
                     run_id="test-run-id",  # Using placeholder run_id like SaveImage
                     filename=final_filename_for_upload, # Use the final filename (potentially with -audio)
                     subfolder=subfolder,
-                    type="output" if save_output else "temp"
+                    type="output" if save_output else "temp",
+                    filename_prefix=filename,
+                    file_extension=video_format['extension'], # Corrected to use video_format['extension']   
+                    filename_template=filename_template_video
                  )
 
         if extra_options.get('VHS_KeepIntermediate', True) == False:
