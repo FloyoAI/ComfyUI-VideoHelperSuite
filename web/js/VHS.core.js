@@ -500,7 +500,7 @@ async function uploadFile(file, progressCallback) {
         });
        }
         const url = api.apiURL("/upload/image")
-        const resp = await new Promise((resolve) => {
+        resp = await new Promise((resolve) => {
             let req = new XMLHttpRequest()
             req.upload.onprogress = (e) => progressCallback?.(e.loaded/e.total)
             req.onload = () => resolve(req)
