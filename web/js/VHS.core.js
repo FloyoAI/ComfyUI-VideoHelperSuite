@@ -493,12 +493,15 @@ async function uploadFile(file, progressCallback) {
 
         if (window.parent.floyo) {
             resp = await window.parent.floyo.uploadImage(body);
-       } else {
-        resp = await api.fetchApi("/upload/image", {
+        } else {
+          resp = await api.fetchApi("/upload/image", {
             method: "POST",
             body,
-        });
+          });
        }
+
+       // XHR Upload code to track upload progress ---------------
+       /*
         const url = api.apiURL("/upload/image")
         resp = await new Promise((resolve) => {
             let req = new XMLHttpRequest()
@@ -512,6 +515,7 @@ async function uploadFile(file, progressCallback) {
                 req.send(body)
             })
         })
+        */
 
         if (resp.status !== 200) {
             alert(resp.status + " - " + resp.statusText);
