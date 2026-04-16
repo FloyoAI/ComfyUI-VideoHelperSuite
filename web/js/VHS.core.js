@@ -812,8 +812,11 @@ function addUploadWidget(nodeType, nodeData, widgetName, type="video") {
                 let resp = await uploadFile(file, (p) => node.progress = p)
                 node.progress = undefined
                 if (resp.status != 200) {
+                    console.log('[VHS] - Failed to upload file')
                     return false
                 }
+                console.log('[VHS] - File uploaded successfully')
+                console.log('[VHS] - Response:', JSON.parse(resp.responseText))
                 const filename = JSON.parse(resp.responseText).name;
                 pathWidget.options.values.push(filename);
                 pathWidget.value = filename;
