@@ -96,6 +96,19 @@ def apply_format_widgets(format_name, kwargs):
         video_format_path = folder_paths.get_full_path("VHS_video_formats", format_name)
     with open(video_format_path, 'r') as stream:
         video_format = json.load(stream)
+    # @FLOYO: values a ["name", {value: args}] mapping in the format still understands
+    mapped_values = {}
+    def collect_mapped_values(cont):
+        if isinstance(cont, dict):
+            for v in cont.values():
+                collect_mapped_values(v)
+        elif isinstance(cont, list):
+            if len(cont) == 2 and isinstance(cont[0], str) and isinstance(cont[1], dict):
+                mapped_values.setdefault(cont[0], []).extend(str(k) for k in cont[1])
+            for v in cont:
+                collect_mapped_values(v)
+    collect_mapped_values(video_format)
+    # @FLOYO end
     for w in iterate_format(video_format):
         if w[0] not in kwargs:
             if len(w) > 2 and 'default' in w[2]:
@@ -108,6 +121,22 @@ def apply_format_widgets(format_name, kwargs):
                     default = {"BOOLEAN": False, "INT": 0, "FLOAT": 0, "STRING": ""}[w[1]]
             kwargs[w[0]] = default
             logger.warn(f"Missing input for {w[0]} has been set to {default}")
+        # @FLOYO: a workflow saved before an option was dropped (ffv1 level 0/1) or before a
+        # crf maximum was lowered still carries the old value, and ffmpeg fails on it.
+        # Bring such values back to what the widget offers today. Values the format still
+        # maps (ProRes keeps profile "1".."4" from older saves) are left alone.
+        elif type(w[1]) is list:
+            accepted = [str(option) for option in w[1]] + mapped_values.get(w[0], [])
+            if str(kwargs[w[0]]) not in accepted:
+                default = w[2]['default'] if len(w) > 2 and 'default' in w[2] else w[1][0]
+                logger.warn(f"Unsupported value {kwargs[w[0]]} for {w[0]} has been set to {default}")
+                kwargs[w[0]] = default
+        elif w[1] in ("INT", "FLOAT") and len(w) > 2 and type(kwargs[w[0]]) in (int, float):
+            value = min(max(kwargs[w[0]], w[2].get('min', kwargs[w[0]])), w[2].get('max', kwargs[w[0]]))
+            if value != kwargs[w[0]]:
+                logger.warn(f"Out of range value {kwargs[w[0]]} for {w[0]} has been set to {value}")
+                kwargs[w[0]] = value
+        # @FLOYO end
     wit = iterate_format(video_format, False)
     for w in wit:
         while isinstance(w, list):
